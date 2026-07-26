@@ -1,0 +1,6 @@
+specification,feature,sign_consistency,mean_coef
+raw prices,grain_price,0.5483870967741935,7.982254658197576
+raw prices,livestock_price,0.6129032258064516,14.805517435842571
+raw prices,feed_cost,0.5161290322580645,4.7145030140285975
+segment margins,crop_margin,0.8709677419354839,30.34729588613677
+segment margins,livestock_margin,0.6451612903225806,4.98169572247664

@@ -1,0 +1,6 @@
+feature,true_lag,scan_train_only,abs_corr,scan_full_series,abs_err
+crop_margin,4,4,0.38560243545145206,2,0
+livestock_margin,5,0,0.4055033804442412,0,5
+interest_rate,6,10,0.30388447072740693,2,4
+sentiment,2,1,0.09038571638084009,1,1
+precipitation,3,5,0.13037643717288794,5,2
