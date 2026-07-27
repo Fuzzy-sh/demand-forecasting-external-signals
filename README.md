@@ -176,6 +176,54 @@ performance.
 
 ---
 
+## A second pass: production plan, multi-horizon, and fixed intervals
+
+[`notebooks/02_production_forecasting_plan.ipynb`](notebooks/02_production_forecasting_plan.ipynb)
+closes the two limitations this README flags below, and sketches what running it monthly
+would involve.
+
+**The interval under-coverage was a bug, not a modelling limit.** Two errors: no
+finite-sample conformal correction (the quantile is the `ceil((n+1)·coverage)`-th smallest
+absolute residual, not the plain quantile), and warm-up origins were being scored. Fixed:
+
+| | Coverage (nominal 0.80) |
+|---|---:|
+| Notebook 01, pooled quantile | 0.729 |
+| Finite-sample conformal, flat band | **0.868** |
+| Normalized (adaptive) conformal, BayesianRidge | **0.849** |
+
+**Multi-horizon.** A recursive 6-month forecast, rebuilding every lag and rolling feature at
+each step and feeding predictions back in. Bands are calibrated **per horizon** from
+backtested h-step paths rather than reusing the one-step number — ±66 at h=1 widening to ±74
+at h=6. Error grows only modestly here because seasonality dominates and calendar features
+do not decay with horizon; on a momentum-driven series the curve would be far steeper. The
+point is to measure that curve, not assume it.
+
+**A third finding that did not go as designed.** Adaptive bands were supposed to be the
+upgrade. They tracked error only weakly (r ≈ +0.12 vs −0.02 for flat) at essentially
+identical mean width (180.7 vs 180.9). The gain is confined to calibration, and the notebook
+says so rather than presenting the method as a win.
+
+**Leaderboard**, all models on the same origins and the same benchmark:
+
+| Model | MAE | MASE | Direction acc. |
+|---|---:|---:|---:|
+| ARD | 48.1 | **0.796** | 0.771 |
+| BayesianRidge | 49.2 | 0.814 | 0.800 |
+| Ridge | 49.9 | 0.826 | 0.800 |
+| Gradient boosting | 57.8 | 0.956 | 0.743 |
+| Seasonal naive | 60.5 | 1.000 | 0.786 |
+
+The spread between serious models is narrow — a reason to choose on interpretability,
+stability and retraining cost rather than a third decimal place.
+
+Section 7 covers the production side: monthly cadence tied to publication delays, the
+ordered pipeline with its guards, append-only output tables so past forecasts stay auditable,
+and three monitoring alerts (coverage drift, MASE > 1, lag instability). It also names what
+should *not* be automated — lag selection, for the reason in §2 above.
+
+---
+
 ## Running it
 
 ```bash
@@ -199,15 +247,16 @@ run_analysis.py    end-to-end run producing every number in this README
 
 - **The generator is my own model of the problem.** A synthetic response surface cannot
   prove a method works on real demand data; this demonstrates methodology, not validates it.
-- **One-step-ahead only.** Planning horizons are usually 3–12 months, where error
-  compounds and the lag structure matters more, not less.
+- ~~**One-step-ahead only.**~~ **Addressed in notebook 02** — recursive 6-month forecast with
+  horizon-specific bands. Still assumes exogenous drivers carried forward at last value;
+  forecasting those needs its own model and error budget.
 - **Single series.** Real fleets forecast hundreds of SKU–region cells, where hierarchical
   reconciliation and cross-series pooling matter and are not addressed here.
 - **No regime changes.** The generator has no structural break. Real demand series have
   them, and they are the main reason backtests overstate live performance.
-- **Interval calibration is unresolved.** Pooled residual quantiles under-cover (0.73 vs
-  0.80 nominal) because forecast error is non-stationary. Documented above rather than
-  silently tuned away.
+- ~~**Interval calibration is unresolved.**~~ **Fixed in notebook 02** — the under-coverage
+  was a missing finite-sample conformal correction plus scored warm-up rows, not a modelling
+  limit. Now 0.868 flat / 0.849 adaptive against 0.80 nominal.
 - **Single seed for headline numbers.** Magnitudes shift a few points across seeds; the
   direction of all three findings is stable.
 
